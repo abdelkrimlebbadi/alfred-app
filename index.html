@@ -106,6 +106,8 @@
 
   .header-actions { display: flex; gap: 8px; }
 
+  .icon-btn.active { background: var(--gold-glow); border-color: var(--gold-dim); color: var(--gold); }
+
   .icon-btn {
     width: 34px; height: 34px;
     background: var(--surface);
@@ -528,6 +530,7 @@
       </div>
     </div>
     <div class="header-actions">
+      <button class="icon-btn" id="voice-btn" onclick="toggleVoice()" title="Voix">🔇</button>
       <button class="icon-btn" onclick="clearChat()" title="Effacer">🗑</button>
       <button class="icon-btn" onclick="openSettings()" title="Paramètres">⚙️</button>
     </div>
@@ -654,6 +657,66 @@ let conversationHistory = [];
 let isLoading = false;
 let userContext = '';
 let userName = 'Abdel';
+let voiceEnabled = localStorage.getItem('alfred_voice') === 'true';
+let frenchVoice = null;
+
+// ── TEXT TO SPEECH ──
+function loadVoices() {
+  const voices = speechSynthesis.getVoices();
+  // Prefer a French voice, ideally a male/premium one if available
+  frenchVoice = voices.find(v => v.lang === 'fr-FR' && /enhanced|premium/i.test(v.name))
+             || voices.find(v => v.lang === 'fr-FR')
+             || voices.find(v => v.lang.startsWith('fr'))
+             || null;
+}
+if ('speechSynthesis' in window) {
+  speechSynthesis.onvoiceschanged = loadVoices;
+  loadVoices();
+}
+
+function speak(text) {
+  if (!voiceEnabled || !('speechSynthesis' in window)) return;
+  // Strip markdown symbols before speaking
+  const clean = text
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/`(.*?)`/g, '$1')
+    .replace(/[#_~]/g, '');
+  speechSynthesis.cancel(); // stop any ongoing speech
+  const utter = new SpeechSynthesisUtterance(clean);
+  utter.lang = 'fr-FR';
+  if (frenchVoice) utter.voice = frenchVoice;
+  utter.rate = 1.02;
+  utter.pitch = 0.95;
+  speechSynthesis.speak(utter);
+}
+
+function toggleVoice() {
+  voiceEnabled = !voiceEnabled;
+  localStorage.setItem('alfred_voice', voiceEnabled);
+  const btn = document.getElementById('voice-btn');
+  if (voiceEnabled) {
+    btn.textContent = '🔊';
+    btn.classList.add('active');
+    showToast('Voix activée 🔊');
+    // tiny test utterance so the user gets immediate feedback
+    speak('Alfred est à votre écoute.');
+  } else {
+    btn.textContent = '🔇';
+    btn.classList.remove('active');
+    speechSynthesis.cancel();
+    showToast('Voix désactivée');
+  }
+}
+
+// init button state on load
+function initVoiceButton() {
+  const btn = document.getElementById('voice-btn');
+  if (voiceEnabled) {
+    btn.textContent = '🔊';
+    btn.classList.add('active');
+  }
+}
 
 // ── ALFRED SYSTEM PROMPT ──
 function buildSystemPrompt() {
@@ -850,6 +913,7 @@ async function sendMessage(overrideText) {
       const reply = data.content?.[0]?.text || 'Réponse vide.';
       conversationHistory.push({ role: 'assistant', content: reply });
       addMessage('alfred', reply);
+      speak(reply);
     }
 
   } catch (err) {
@@ -963,6 +1027,7 @@ function showToast(msg) {
 
 // ── INIT ──
 loadSettings();
+initVoiceButton();
 </script>
 
 </body>
