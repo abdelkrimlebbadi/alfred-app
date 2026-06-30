@@ -874,59 +874,62 @@ function saveSettings() {
 let recognition = null;
 let isListening = false;
 
-function setupRecognition() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) return null;
-  const rec = new SpeechRecognition();
-  rec.lang = 'fr-FR';
-  rec.continuous = false;
-  rec.interimResults = false;
+function toggleMic() {
+  if (isListening) {
+    // manual stop
+    if (recognition) recognition.stop();
+    stopListening();
+    return;
+  }
 
-  rec.onresult = (event) => {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    showToast('⚠ Micro non supporté — utilise le clavier iPhone');
+    return;
+  }
+
+  // Always recreate — fixes Safari iOS bug where second call fails silently
+  recognition = new SpeechRecognition();
+  recognition.lang = 'fr-FR';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  recognition.onresult = (event) => {
     const transcript = event.results[0][0].transcript;
     const input = document.getElementById('user-input');
     input.value = transcript;
     autoResize(input);
   };
 
-  rec.onerror = (event) => {
-    showToast('⚠ Micro indisponible : ' + event.error);
+  recognition.onerror = (event) => {
+    showToast('⚠ Micro : ' + event.error);
     stopListening();
   };
 
-  rec.onend = () => {
+  recognition.onend = () => {
     stopListening();
+    // Auto-send if there's something in the input
+    const input = document.getElementById('user-input');
+    if (input.value.trim()) {
+      setTimeout(() => sendMessage(), 300);
+    }
   };
 
-  return rec;
-}
-
-function toggleMic() {
-  if (!recognition) {
-    recognition = setupRecognition();
-    if (!recognition) {
-      showToast('⚠ Micro non supporté sur ce navigateur');
-      return;
-    }
-  }
-  if (isListening) {
-    recognition.stop();
+  try {
+    recognition.start();
+    isListening = true;
+    document.getElementById('mic-btn').classList.add('listening');
+    document.getElementById('mic-btn').textContent = '⏺';
+    showToast('🎤 Je t\'écoute...');
+  } catch (e) {
+    showToast('⚠ Impossible de démarrer le micro');
     stopListening();
-  } else {
-    try {
-      recognition.start();
-      isListening = true;
-      document.getElementById('mic-btn').classList.add('listening');
-      document.getElementById('mic-btn').textContent = '⏺';
-      showToast('🎤 Je t\'écoute...');
-    } catch (e) {
-      showToast('⚠ Impossible de démarrer le micro');
-    }
   }
 }
 
 function stopListening() {
   isListening = false;
+  recognition = null; // force recreation next time
   const btn = document.getElementById('mic-btn');
   btn.classList.remove('listening');
   btn.textContent = '🎤';
