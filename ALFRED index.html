@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ALFRED">
+<meta name="theme-color" content="#0a0a0f">
+<title>A.L.F.R.E.D.</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Inter:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg:        #0a0a0f;
+    --surface:   #111118;
+    --border:    #1e1e2e;
+    --gold:      #c9a84c;
+    --gold-dim:  #7a6030;
+    --gold-glow: rgba(201,168,76,0.12);
+    --text:      #e8e8f0;
+    --muted:     #5a5a72;
+    --user-bg:   #1a1a28;
+    --alfred-bg: #0f0f1a;
+    --danger:    #e05555;
+    --radius:    16px;
+    --mono:      'DM Mono', monospace;
+    --sans:      'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    overflow: hidden;
+  }
+
+  /* ── APP SHELL ── */
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    max-width: 480px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px 12px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+  }
+
+  .header-left { display: flex; align-items: center; gap: 12px; }
+
+  .alfred-avatar {
+    width: 38px; height: 38px;
+    background: linear-gradient(135deg, #1a1520, #0d0d18);
+    border: 1.5px solid var(--gold-dim);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--gold);
+    letter-spacing: 0.5px;
+    position: relative;
+  }
+
+  .alfred-avatar::after {
+    content: '';
+    position: absolute;
+    width: 8px; height: 8px;
+    background: #3ddc84;
+    border-radius: 50%;
+    bottom: 0; right: 0;
+    border: 2px solid var(--bg);
+  }
+
+  .header-info { display: flex; flex-direction: column; }
+
+  .header-name {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gold);
+    letter-spacing: 1.5px;
+  }
+
+  .header-status {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 300;
+  }
+
+  .header-actions { display: flex; gap: 8px; }
+
+  .icon-btn {
+    width: 34px; height: 34px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.15s;
+    font-size: 15px;
+  }
+  .icon-btn:active { background: var(--border); color: var(--gold); }
+
+  /* ── BRIEFING BANNER ── */
+  #briefing {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  #briefing::-webkit-scrollbar { display: none; }
+
+  .brief-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 11.5px;
+    color: var(--muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .brief-pill:active { border-color: var(--gold-dim); }
+  .brief-pill .emoji { font-size: 13px; }
+
+  /* ── MESSAGES ── */
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+  #messages::-webkit-scrollbar { display: none; }
+
+  /* Welcome */
+  .welcome {
+    text-align: center;
+    padding: 30px 20px 10px;
+  }
+
+  .welcome-logo {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--gold-dim);
+    letter-spacing: 4px;
+    margin-bottom: 8px;
+  }
+
+  .welcome-title {
+    font-family: var(--mono);
+    font-size: 22px;
+    color: var(--gold);
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+
+  .welcome-sub {
+    font-size: 11.5px;
+    color: var(--muted);
+    font-weight: 300;
+    letter-spacing: 0.5px;
+    margin-bottom: 24px;
+  }
+
+  .welcome-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--border);
+    font-size: 10px;
+    font-family: var(--mono);
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+  }
+  .welcome-divider::before,
+  .welcome-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Quick actions */
+  .quick-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .quick-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .quick-btn:active { border-color: var(--gold-dim); background: var(--gold-glow); }
+
+  .quick-btn .qb-icon { font-size: 18px; margin-bottom: 6px; }
+  .quick-btn .qb-label {
+    font-size: 12px;
+    color: var(--text);
+    font-weight: 500;
+    display: block;
+  }
+  .quick-btn .qb-sub {
+    font-size: 10.5px;
+    color: var(--muted);
+    margin-top: 2px;
+    display: block;
+  }
+
+  /* Messages */
+  .msg {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 88%;
+  }
+
+  .msg.user { align-self: flex-end; align-items: flex-end; }
+  .msg.alfred { align-self: flex-start; align-items: flex-start; }
+
+  .msg-sender {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    padding: 0 4px;
+  }
+  .msg.alfred .msg-sender { color: var(--gold-dim); }
+
+  .msg-bubble {
+    padding: 11px 14px;
+    border-radius: var(--radius);
+    font-size: 14.5px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .msg.user .msg-bubble {
+    background: var(--user-bg);
+    border: 1px solid var(--border);
+    border-bottom-right-radius: 4px;
+    color: var(--text);
+  }
+
+  .msg.alfred .msg-bubble {
+    background: var(--alfred-bg);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+    color: var(--text);
+  }
+
+  .msg-time {
+    font-size: 10px;
+    color: var(--muted);
+    padding: 0 4px;
+  }
+
+  /* Typing indicator */
+  .typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 12px 14px;
+    background: var(--alfred-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    border-bottom-left-radius: 4px;
+    width: fit-content;
+  }
+
+  .typing-dot {
+    width: 6px; height: 6px;
+    background: var(--gold-dim);
+    border-radius: 50%;
+    animation: typingPulse 1.2s infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes typingPulse {
+    0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+    30% { opacity: 1; transform: scale(1); }
+  }
+
+  /* Markdown-like styling inside bubbles */
+  .msg-bubble strong { color: var(--gold); font-weight: 600; }
+  .msg-bubble em { color: var(--muted); font-style: italic; }
+  .msg-bubble code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: rgba(201,168,76,0.08);
+    border: 1px solid var(--gold-dim);
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: var(--gold);
+  }
+
+  /* ── INPUT AREA ── */
+  #input-area {
+    padding: 12px 16px;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .input-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 8px 8px 8px 16px;
+    transition: border-color 0.2s;
+  }
+  .input-row:focus-within { border-color: var(--gold-dim); }
+
+  #user-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    resize: none;
+    max-height: 120px;
+    min-height: 24px;
+    line-height: 1.5;
+  }
+
+  #user-input::placeholder { color: var(--muted); }
+
+  #send-btn {
+    width: 36px; height: 36px;
+    background: var(--gold);
+    border: none;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s;
+    color: #0a0a0f;
+    font-size: 16px;
+  }
+  #send-btn:active { transform: scale(0.93); background: var(--gold-dim); }
+  #send-btn:disabled { background: var(--border); color: var(--muted); cursor: default; }
+
+  /* ── SETTINGS PANEL ── */
+  #settings-panel {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: none;
+  }
+
+  #settings-panel.open { display: block; }
+
+  .settings-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+  }
+
+  .settings-sheet {
+    position: absolute;
+    bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-radius: 20px 20px 0 0;
+    padding: 20px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .settings-handle {
+    width: 36px; height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+
+  .settings-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+  }
+
+  .settings-field { margin-bottom: 14px; }
+
+  .settings-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .settings-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .settings-input:focus { border-color: var(--gold-dim); }
+  .settings-input::placeholder { color: var(--muted); }
+
+  textarea.settings-input {
+    resize: vertical;
+    min-height: 80px;
+    font-size: 12.5px;
+    font-family: var(--mono);
+    line-height: 1.5;
+  }
+
+  .settings-save {
+    width: 100%;
+    background: var(--gold);
+    color: #0a0a0f;
+    border: none;
+    border-radius: 12px;
+    padding: 13px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: opacity 0.15s;
+  }
+  .settings-save:active { opacity: 0.8; }
+
+  .api-status {
+    font-size: 11px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    margin-top: 6px;
+    display: none;
+  }
+  .api-status.ok { background: rgba(61,220,132,0.1); color: #3ddc84; display: block; }
+  .api-status.error { background: rgba(224,85,85,0.1); color: var(--danger); display: block; }
+
+  /* ── CLEAR CONFIRM ── */
+  .toast {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-size: 13px;
+    color: var(--text);
+    z-index: 200;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+
+  /* ── SCROLLBAR ── */
+  * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-left">
+      <div class="alfred-avatar">AI</div>
+      <div class="header-info">
+        <span class="header-name">A.L.F.R.E.D.</span>
+        <span class="header-status" id="status-text">Executive Intelligence • En ligne</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" onclick="clearChat()" title="Effacer">🗑</button>
+      <button class="icon-btn" onclick="openSettings()" title="Paramètres">⚙️</button>
+    </div>
+  </header>
+
+  <!-- BRIEFING BAR -->
+  <div id="briefing">
+    <div class="brief-pill" onclick="quickSend('Quel est mon briefing du jour ?')">
+      <span class="emoji">📋</span> Briefing
+    </div>
+    <div class="brief-pill" onclick="quickSend('Prépare mon entretien du jour')">
+      <span class="emoji">💼</span> Entretien
+    </div>
+    <div class="brief-pill" onclick="quickSend('Résultats foot du week-end')">
+      <span class="emoji">⚽</span> Sport
+    </div>
+    <div class="brief-pill" onclick="quickSend('Analyse le marché business aujourd\'hui')">
+      <span class="emoji">📈</span> Business
+    </div>
+    <div class="brief-pill" onclick="quickSend('Aide-moi à rédiger un email professionnel')">
+      <span class="emoji">📧</span> Email
+    </div>
+    <div class="brief-pill" onclick="quickSend('Donne-moi des opportunités commerciales MENA')">
+      <span class="emoji">🌍</span> MENA
+    </div>
+  </div>
+
+  <!-- MESSAGES -->
+  <div id="messages">
+    <div class="welcome">
+      <div class="welcome-logo">ARTIFICIAL LIFE FRAMEWORK FOR REASONING, EXECUTION & DECISION</div>
+      <div class="welcome-title">ALFRED</div>
+      <div class="welcome-sub">Votre majordome exécutif • سلام عبد الكريم</div>
+      <div class="welcome-divider">ACCÈS RAPIDE</div>
+      <div class="quick-grid">
+        <button class="quick-btn" onclick="quickSend('Prépare mon entretien BUCCHI du 7 juillet')">
+          <div class="qb-icon">🎯</div>
+          <span class="qb-label">Entretien BUCCHI</span>
+          <span class="qb-sub">7 juillet • Dîner</span>
+        </button>
+        <button class="quick-btn" onclick="quickSend('Analyse HydroVeille.ma et état du projet')">
+          <div class="qb-icon">💧</div>
+          <span class="qb-label">HydroVeille</span>
+          <span class="qb-sub">Statut projet SaaS</span>
+        </button>
+        <button class="quick-btn" onclick="quickSend('Résultats Liverpool dernier match')">
+          <div class="qb-icon">⚽</div>
+          <span class="qb-label">Liverpool FC</span>
+          <span class="qb-sub">Résultats & stats</span>
+        </button>
+        <button class="quick-btn" onclick="quickSend('Rédige un message WhatsApp de négociation salariale pour Amitech')">
+          <div class="qb-icon">💬</div>
+          <span class="qb-label">Amitech Négo</span>
+          <span class="qb-sub">Package salarial</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- INPUT -->
+  <div id="input-area">
+    <div class="input-row">
+      <textarea
+        id="user-input"
+        placeholder="Écris à Alfred... (FR / AR / Darija / EN / ES)"
+        rows="1"
+        onkeydown="handleKey(event)"
+        oninput="autoResize(this)"
+      ></textarea>
+      <button id="send-btn" onclick="sendMessage()">➤</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- SETTINGS PANEL -->
+<div id="settings-panel">
+  <div class="settings-overlay" onclick="closeSettings()"></div>
+  <div class="settings-sheet">
+    <div class="settings-handle"></div>
+    <div class="settings-title">⚙ CONFIGURATION ALFRED</div>
+
+    <div class="settings-field">
+      <label class="settings-label">CLÉ API ANTHROPIC</label>
+      <input
+        type="password"
+        class="settings-input"
+        id="api-key-input"
+        placeholder="sk-ant-api..."
+      />
+      <div class="api-status" id="api-status"></div>
+    </div>
+
+    <div class="settings-field">
+      <label class="settings-label">CONTEXTE PERSONNEL (optionnel — enrichit la mémoire)</label>
+      <textarea
+        class="settings-input"
+        id="context-input"
+        placeholder="Ex: Je suis Abdelkrim, Directeur Commercial basé à Casablanca. Mes priorités : entretien BUCCHI le 7 juillet, projet HydroVeille.ma, négociation Amitech..."
+      ></textarea>
+    </div>
+
+    <div class="settings-field">
+      <label class="settings-label">PRÉNOM AFFICHÉ</label>
+      <input
+        type="text"
+        class="settings-input"
+        id="name-input"
+        placeholder="Abdel"
+        value="Abdel"
+      />
+    </div>
+
+    <button class="settings-save" onclick="saveSettings()">SAUVEGARDER</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──
+let conversationHistory = [];
+let isLoading = false;
+let userContext = '';
+let userName = 'Abdel';
+
+// ── ALFRED SYSTEM PROMPT ──
+function buildSystemPrompt() {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('fr-FR', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+  const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+  const personalContext = userContext || `
+Nom : Abdelkrim Lebbadi (Abdel)
+Poste : Directeur Commercial / Business Development Senior
+Localisation : Casablanca, Maroc
+Expérience : 15+ ans B2B, 9 ans plasturgie/canalisations, zone MENA & Afrique
+Langues : Arabe, Français, Espagnol, Anglais, Darija marocaine
+
+PRIORITÉS ACTUELLES :
+1. Entretien dîner BUCCHI/Roncucci — 7 juillet (priorité absolue)
+2. Entretien virtuel RH Garena/Sea Limited — 7 juillet (rôle BD MENA)
+3. Réunion DG Amitech Maroc — package salarial sur la table
+4. Co-fondateur HydroVeille.ma — SaaS veille appels d'offres hydrauliques Maroc/Afrique
+
+SPORTS : Liverpool FC, Real Madrid, F1, MotoGP, NBA, Snooker
+FAMILLE : Marié à Kawtar`;
+
+  return `Tu es A.L.F.R.E.D. — Artificial Life Framework for Reasoning, Execution & Decision.
+
+Tu n'es pas un assistant. Tu es le majordome exécutif personnel de ${userName}.
+Tu es son Directeur de Cabinet, Chef de Projet, Directeur Commercial, Analyste, Coach, et Coordinateur.
+Tu travailles UNIQUEMENT dans son intérêt. Tu anticipes. Tu agis. Tu livres.
+
+DATE & HEURE : ${dateStr} — ${timeStr}
+
+═══ PROFIL DE ${userName.toUpperCase()} ═══
+${personalContext}
+
+═══ PHILOSOPHIE ALFRED ═══
+Avant chaque réponse, tu analyses silencieusement :
+• Quel est le vrai besoin derrière la demande ?
+• Y a-t-il une meilleure approche ?
+• Y a-t-il un risque ou une urgence à signaler ?
+• Peut-on simplifier ou automatiser ?
+Puis tu réponds avec précision.
+
+═══ LANGUES ═══
+Tu comprends et réponds naturellement en :
+→ Français (langue principale)
+→ Darija marocaine ("salam, chno kayn, wach...")
+→ Arabe classique (الفصحى)
+→ Anglais
+→ Espagnol
+
+Tu peux mélanger les langues dans une même réponse quand c'est naturel.
+Si ${userName} écrit en darija, tu réponds en darija mélangée de français.
+
+═══ MODES D'EXPERTISE ═══
+Tu sélectionnes automatiquement le bon rôle :
+→ CEO/COO : vision stratégique, décisions importantes
+→ Directeur Commercial : négociation, pipeline, clients, offres
+→ Business Developer : nouveaux marchés, partenariats, MENA/Afrique
+→ Coach : préparation entretiens, confiance, performance
+→ Analyste : données, marché, concurrence, financier
+→ Juriste : information générale (jamais conseil formel)
+→ RH : rémunération, contrats, positionnement
+→ Développeur : code, automatisation, SaaS
+→ Sports : résultats, stats, analyses matchs
+
+═══ RÈGLES DE COMMUNICATION ═══
+• Jamais robotique. Jamais inutilement long.
+• Toujours orienté action. Toujours livrable.
+• Tu tutoies ${userName}. Tu l'appelles "Abdel" ou par son prénom.
+• Tu peux dire "Wallah", "Safi", "Mzyan" en darija quand c'est naturel.
+• Tu distingues clairement : FAIT / HYPOTHÈSE / RECOMMANDATION
+• Chaque livrable doit être directement exploitable.
+• Si tu détectes une urgence, une opportunité ou un oubli → tu le signales.
+
+═══ FORMAT DES RÉPONSES ═══
+• Réponses courtes pour les questions simples
+• Réponses structurées pour les analyses et préparations
+• Utilise des emojis avec parcimonie mais de façon pertinente
+• Pour les listes : utilise des tirets ou des numéros
+• Pour les points importants : utilise **gras**
+• Termine par une prochaine étape concrète quand c'est pertinent
+
+═══ LIMITES HONNÊTES ═══
+• Tu n'inventes jamais une information
+• Tu signales clairement quand une intégration externe est nécessaire (Gmail, WhatsApp, calendrier)
+• Tu indiques tes limites de connaissance sans détour
+
+RAPPEL : Tu es Alfred. Tu anticipes. Tu livres. Tu ne déçois pas.`;
+}
+
+// ── LOAD SETTINGS ──
+function loadSettings() {
+  const key = localStorage.getItem('alfred_key') || '';
+  const ctx = localStorage.getItem('alfred_context') || '';
+  const name = localStorage.getItem('alfred_name') || 'Abdel';
+  userContext = ctx;
+  userName = name;
+  document.getElementById('api-key-input').value = key;
+  document.getElementById('context-input').value = ctx;
+  document.getElementById('name-input').value = name;
+}
+
+function saveSettings() {
+  const key = document.getElementById('api-key-input').value.trim();
+  const ctx = document.getElementById('context-input').value.trim();
+  const name = document.getElementById('name-input').value.trim() || 'Abdel';
+  localStorage.setItem('alfred_key', key);
+  localStorage.setItem('alfred_context', ctx);
+  localStorage.setItem('alfred_name', name);
+  userContext = ctx;
+  userName = name;
+  const status = document.getElementById('api-status');
+  if (key.startsWith('sk-ant-')) {
+    status.className = 'api-status ok';
+    status.textContent = '✓ Clé API valide détectée';
+  } else if (key) {
+    status.className = 'api-status error';
+    status.textContent = '⚠ Format inattendu — vérifiez la clé';
+  } else {
+    status.className = 'api-status error';
+    status.textContent = '⚠ Aucune clé API — Alfred ne peut pas répondre';
+  }
+  showToast('Configuration sauvegardée ✓');
+  setTimeout(closeSettings, 1200);
+}
+
+// ── SEND MESSAGE ──
+async function sendMessage(overrideText) {
+  if (isLoading) return;
+  const input = document.getElementById('user-input');
+  const text = overrideText || input.value.trim();
+  if (!text) return;
+
+  const apiKey = localStorage.getItem('alfred_key') || '';
+  if (!apiKey) {
+    showToast('⚠ Configure ta clé API dans ⚙️');
+    openSettings();
+    return;
+  }
+
+  // Add user message
+  addMessage('user', text);
+  if (!overrideText) {
+    input.value = '';
+    input.style.height = 'auto';
+  }
+  conversationHistory.push({ role: 'user', content: text });
+
+  // Show typing
+  isLoading = true;
+  updateStatus('Alfred réfléchit...');
+  document.getElementById('send-btn').disabled = true;
+  const typingEl = addTyping();
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1500,
+        system: buildSystemPrompt(),
+        messages: conversationHistory
+      })
+    });
+
+    let data;
+    const rawText = await response.text();
+    try {
+      data = JSON.parse(rawText);
+    } catch (parseErr) {
+      typingEl.remove();
+      addMessage('alfred', `⚠️ Réponse non-JSON reçue (status ${response.status}).\n\nDébut de la réponse :\n\`${rawText.slice(0, 200)}\``);
+      isLoading = false;
+      document.getElementById('send-btn').disabled = false;
+      updateStatus('Executive Intelligence • En ligne');
+      return;
+    }
+
+    typingEl.remove();
+
+    if (!response.ok || data.error) {
+      const errMsg = data.error?.message || `HTTP ${response.status}`;
+      const errType = data.error?.type || 'unknown_error';
+      addMessage('alfred', `⚠️ Erreur API (${errType})\n\n${errMsg}\n\nVérifie ta clé dans les paramètres ⚙️`);
+    } else {
+      const reply = data.content?.[0]?.text || 'Réponse vide.';
+      conversationHistory.push({ role: 'assistant', content: reply });
+      addMessage('alfred', reply);
+    }
+
+  } catch (err) {
+    typingEl.remove();
+    addMessage('alfred', `⚠️ Connexion impossible (erreur réseau/CORS).\n\nDétail technique : \`${err.message}\`\n\nCause probable : le fichier est ouvert en local (file://). Essaie de l'héberger sur un vrai domaine (ex: Vercel) plutôt que de l'ouvrir directement depuis Fichiers/Safari.`);
+  }
+
+  isLoading = false;
+  document.getElementById('send-btn').disabled = false;
+  updateStatus('Executive Intelligence • En ligne');
+}
+
+function quickSend(text) {
+  sendMessage(text);
+}
+
+// ── DOM HELPERS ──
+function addMessage(role, text) {
+  const msgs = document.getElementById('messages');
+
+  // Remove welcome screen on first real message
+  const welcome = msgs.querySelector('.welcome');
+  if (welcome && role === 'user') welcome.style.display = 'none';
+
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+
+  const now = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const sender = role === 'alfred' ? 'ALFRED' : userName.toUpperCase();
+
+  div.innerHTML = `
+    <span class="msg-sender">${sender}</span>
+    <div class="msg-bubble">${formatText(text)}</div>
+    <span class="msg-time">${now}</span>
+  `;
+
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function addTyping() {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg alfred';
+  div.innerHTML = `
+    <span class="msg-sender">ALFRED</span>
+    <div class="typing-indicator">
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+    </div>
+  `;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function formatText(text) {
+  return text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`(.*?)`/g, '<code>$1</code>')
+    .replace(/\n/g, '<br>');
+}
+
+function updateStatus(text) {
+  document.getElementById('status-text').textContent = text;
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function clearChat() {
+  conversationHistory = [];
+  const msgs = document.getElementById('messages');
+  msgs.innerHTML = `
+    <div class="welcome">
+      <div class="welcome-logo">ARTIFICIAL LIFE FRAMEWORK FOR REASONING, EXECUTION & DECISION</div>
+      <div class="welcome-title">ALFRED</div>
+      <div class="welcome-sub">Conversation effacée • Prêt</div>
+    </div>`;
+  showToast('Conversation effacée');
+}
+
+function openSettings() {
+  loadSettings();
+  document.getElementById('settings-panel').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settings-panel').classList.remove('open');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ── INIT ──
+loadSettings();
+</script>
+
+</body>
+</html>
